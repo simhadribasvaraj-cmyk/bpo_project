@@ -1,0 +1,172 @@
+/*
+================================================================================
+VOICESERVE BPO - POWER BI DAX MEASURES SPECIFICATION
+DA-06: Employee Performance, Compensation and Attrition Trend Analysis
+Team: DataVerse Squad, Codegnan
+================================================================================
+Paste these measures into your Power BI Data Model under a dedicated '_Measures' table.
+*/
+
+-- =============================================================================
+-- 1. HEADCOUNT & WORKFORCE VOLUME MEASURES
+-- =============================================================================
+
+Total Headcount = 
+COUNTROWS(Fact_Workforce)
+/* Measures total registered employee volume in the selected filter context */
+
+Active Employees = 
+CALCULATE(
+    COUNTROWS(Fact_Workforce),
+    Fact_Workforce[attrition_flag] = 0
+)
+/* Total employees who remain currently active / retained at VoiceServe */
+
+Total Leavers = 
+CALCULATE(
+    COUNTROWS(Fact_Workforce),
+    Fact_Workforce[attrition_flag] = 1
+)
+/* Total employees who have separated/exited from the organization */
+
+-- =============================================================================
+-- 2. ATTRITION RATE & RETENTION KPIs
+-- =============================================================================
+
+Attrition Rate % = 
+DIVIDE([Total Leavers], [Total Headcount], 0)
+/* Standardized Annual Attrition Rate % */
+
+Early Leavers Count = 
+CALCULATE(
+    COUNTROWS(Fact_Workforce),
+    Fact_Workforce[left_within_90_days] = 1
+)
+/* Count of employees leaving within their first 90 days of employment (Infant Mortality) */
+
+Early Attrition Rate % = 
+DIVIDE([Early Leavers Count], [Total Headcount], 0)
+/* Share of total workforce leaving within the first 90 days */
+
+Early Attrition Share of Exits % = 
+DIVIDE([Early Leavers Count], [Total Leavers], 0)
+/* Proportion of all company leavers who left within the first 90 days (Infant Mortality Share) */
+
+Tenured Leavers Count = 
+[Total Leavers] - [Early Leavers Count]
+/* Exits occurring after 90 days of employment */
+
+Average Tenure (Months) = 
+AVERAGE(Fact_Workforce[tenure_months])
+/* Mean duration of employment in months across selected segment */
+
+Average Tenure of Leavers = 
+CALCULATE(
+    AVERAGE(Fact_Workforce[tenure_months]),
+    Fact_Workforce[attrition_flag] = 1
+)
+/* Average months of service completed by employees before exiting */
+
+-- =============================================================================
+-- 3. FINANCIAL & ATTRITION COST MEASURES (ADJUSTABLE)
+-- =============================================================================
+
+Recruitment Unit Cost = 14500
+/* Average agency sourcing, job board, and HR recruiter cost per replacement hire in INR */
+
+Training Unit Cost = 22000
+/* Classroom induction trainer salary, LMS license, and equipment cost per new hire in INR */
+
+Lost Productivity Early Unit Cost = 18500
+/* Sunk training stipend and negative productivity ROI for leavers exiting <= 90 days */
+
+Lost Productivity Tenured Unit Cost = 48500
+/* 45-day queue vacancy loss, TL overtime payout, and 90-day learning curve ramp in INR */
+
+Blended Cost per Early Leaver = 
+[Recruitment Unit Cost] + [Training Unit Cost] + [Lost Productivity Early Unit Cost]
+/* INR 55,000 per early exit */
+
+Blended Cost per Tenured Leaver = 
+[Recruitment Unit Cost] + [Training Unit Cost] + [Lost Productivity Tenured Unit Cost]
+/* INR 85,000 per tenured exit */
+
+Total Cost of Early Attrition = 
+[Early Leavers Count] * [Blended Cost per Early Leaver]
+/* Aggregate financial loss from infant mortality exits */
+
+Total Cost of Tenured Attrition = 
+[Tenured Leavers Count] * [Blended Cost per Tenured Leaver]
+/* Aggregate financial loss from tenured employee turnover */
+
+Total Cost of Attrition = 
+[Total Cost of Early Attrition] + [Total Cost of Tenured Attrition]
+/* Comprehensive annualized financial bleed from employee attrition */
+
+Total Cost of Attrition (Crores) = 
+DIVIDE([Total Cost of Attrition], 10000000, 0)
+/* Total attrition cost formatted in Indian Crores (₹ Cr) */
+
+-- =============================================================================
+-- 4. COMPENSATION & PERFORMANCE MEASURES
+-- =============================================================================
+
+Average Base Salary = 
+AVERAGE(Fact_Workforce[monthly_salary])
+/* Mean monthly base salary in INR */
+
+Average Incentive Amount = 
+AVERAGE(Fact_Workforce[incentive_amount])
+/* Mean monthly variable incentive earned in INR */
+
+Average Total Monthly Pay = 
+AVERAGE(Fact_Workforce[total_pay])
+/* Mean total monthly compensation (Salary + Incentive) in INR */
+
+Average Last Hike % = 
+AVERAGE(Fact_Workforce[last_hike_percent])
+/* Mean percentage hike received during the most recent performance appraisal */
+
+Low Hike Employee Count = 
+CALCULATE(
+    COUNTROWS(Fact_Workforce),
+    Fact_Workforce[low_hike_flag] = 1
+)
+/* Employees with tenure >= 6 months who received an appraisal hike < 6.0% */
+
+Low Hike Attrition Rate % = 
+CALCULATE(
+    [Attrition Rate %],
+    Fact_Workforce[low_hike_flag] = 1
+)
+/* Attrition rate among employees subject to low appraisal hikes */
+
+Average Quality Score % = 
+AVERAGE(Fact_Workforce[avg_quality_score])
+/* Mean call/ticket quality audit score */
+
+Average Customer Rating = 
+AVERAGE(Fact_Workforce[avg_customer_rating])
+/* Mean CSAT customer rating (1.0 to 5.0 scale) */
+
+Average Attendance % = 
+AVERAGE(Fact_Workforce[avg_attendance_percent])
+/* Mean monthly attendance percentage */
+
+Average Engagement Survey Score = 
+AVERAGE(Fact_Workforce[survey_score])
+/* Mean annual employee engagement survey score (1.0 to 5.0 scale) */
+
+-- =============================================================================
+-- 5. RISK & TARGETING DAX MEASURES
+-- =============================================================================
+
+High Risk Active Employees = 
+CALCULATE(
+    COUNTROWS(Fact_Workforce),
+    Fact_Workforce[attrition_flag] = 0,
+    Fact_Workforce[avg_attendance_percent] < 88.0 || 
+    (Fact_Workforce[shift] = "Night" && Fact_Workforce[low_hike_flag] = 1) ||
+    Fact_Workforce[survey_score] < 3.0
+)
+/* Active employees demonstrating critical turnover warning signs */
