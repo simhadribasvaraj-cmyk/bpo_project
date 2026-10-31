@@ -1,0 +1,6 @@
+process_id,process,voice_flag,target_aht_seconds
+1,Claims & Back Office,Non-Voice / Hybrid,320
+2,Outbound Sales,Voice,240
+3,Chat & Email Support,Non-Voice / Hybrid,480
+4,Inbound Customer Service,Voice,0
+5,Technical Support,Non-Voice / Hybrid,0

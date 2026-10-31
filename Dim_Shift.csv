@@ -1,0 +1,4 @@
+shift_id,shift,shift_timing,night_allowance_eligible
+1,Day,08:00 AM - 05:00 PM,No
+2,Night,09:00 PM - 06:00 AM,Yes
+3,Rotational,Rotational (Weekly Changes),Partial
